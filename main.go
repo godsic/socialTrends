@@ -39,8 +39,8 @@ var (
 	finished = make(chan int)
 	logfn    = flag.String("log", "", "File to output data to (default: $PAGENAME.dat)")
 	period   = flag.Float64("period", 30.0, "Update period (s)")
-	X        = make([]float64, 0, 1000)
-	Y        = make([]float64, 0, 1000)
+	X        = make([]float64, 0, 3000)
+	Y        = make([]float64, 0, 3000)
 )
 
 func saveSvg(X, Y []float64, name string) {
@@ -71,7 +71,7 @@ func saveSvg(X, Y []float64, name string) {
 	c.Dashes = []vg.Length{vg.Points(4), vg.Points(5)}
 	p.Add(c)
 	p.Legend.Add("Безпечний рівень", c)
-	p.Legend.Padding = vg.Length(20)
+	p.Legend.Padding = vg.Length(5)
 	p.Y.Min = 0.0
 	p.Y.Max = 100.0
 
@@ -122,6 +122,14 @@ func startServer(addr string) {
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "index.html")
+}
+
+func rebaseXAxis(X []float64, x0 float64) []float64 {
+	XX := make([]float64, len(X))
+	for i, _ := range X {
+		XX[i] = X[i] - x0
+	}
+	return XX
 }
 
 func main() {
@@ -175,6 +183,6 @@ func main() {
 		X = append(X, x)
 		Y = append(Y, float64(count))
 		fmt.Fprintf(f, "%s\t%d\n", time.Now().Format(layout), count)
-		saveSvg(X, Y, pageName)
+		saveSvg(rebaseXAxis(X, x), Y, pageName)
 	}
 }
