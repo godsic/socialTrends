@@ -23,10 +23,12 @@ import (
 )
 
 const (
-	vkAddr   = "http://vk.com/"
-	layout   = "2006-01-02:15:04:05"
-	extData  = ".dat"
-	extGraph = ".svg"
+	vkAddr          = "http://vk.com/"
+	layout          = "2006-01-02:15:04:05"
+	svgTimeLayout   = "15:04:05 -0700 EEST Jan 2 2006"
+	extData         = ".dat"
+	extGraph        = ".svg"
+	defaultPageName = "typical_enakievo"
 )
 
 var (
@@ -36,7 +38,7 @@ var (
 	v        = url.Values{"own": {"1"}}
 	finished = make(chan int)
 	logfn    = flag.String("log", "", "File to output data to (default: $PAGENAME.dat)")
-	period   = flag.Float64("period", 120.0, "Update period (s)")
+	period   = flag.Float64("period", 30.0, "Update period (s)")
 	X        = make([]float64, 0, 1000)
 	Y        = make([]float64, 0, 1000)
 )
@@ -54,7 +56,7 @@ func saveSvg(X, Y []float64, name string) {
 		panic(err)
 	}
 
-	p.Title.Text = time.Now().String()
+	p.Title.Text = time.Now().Format(svgTimeLayout)
 	p.X.Label.Text = "Час (хв.)"
 	p.Y.Label.Text = "Кількість посилань"
 
@@ -67,8 +69,9 @@ func saveSvg(X, Y []float64, name string) {
 	c := plotter.NewFunction(func(x float64) float64 { return 50.0 })
 	c.Color = color.RGBA{B: 255, A: 255}
 	c.Dashes = []vg.Length{vg.Points(4), vg.Points(5)}
-
 	p.Add(c)
+	p.Legend.Add("Безпечний рівень", c)
+	p.Legend.Padding = vg.Length(20)
 	p.Y.Min = 0.0
 	p.Y.Max = 100.0
 
@@ -113,12 +116,37 @@ func countMatches(postID string, count *int64, finished chan int) {
 	finished <- 1
 }
 
+func startServer(addr string) {
+	log.Panic(http.ListenAndServe(addr, nil))
+}
+
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "index.html")
+}
+
 func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
+	http.HandleFunc("/", rootHandler)
+
+	addr := fmt.Sprintf("%s:%s", os.Getenv("HOST"), os.Getenv("PORT"))
+	if addr == ":" || len(addr) == 0 {
+		addr = ":8080"
+	}
+
+	http.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir("."))))
+
+	go startServer(addr)
+
 	flag.Parse()
-	pageName := flag.Args()[0]
+
+	pageName := defaultPageName
+
+	if len(flag.Args()) > 0 {
+		pageName = flag.Args()[0]
+	}
+
 	log.Println(pageName)
 
 	u := vkAddr + pageName
