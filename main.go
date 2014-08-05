@@ -17,6 +17,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -43,7 +44,7 @@ var (
 	Y        = make([]float64, 0, 3000)
 )
 
-func saveSvg(X, Y []float64, name string) {
+func saveSvg(X, Y []float64, name string, avgNumPosts float64) {
 
 	pts := make(plotter.XYs, len(Y))
 	for i, _ := range Y {
@@ -56,9 +57,9 @@ func saveSvg(X, Y []float64, name string) {
 		panic(err)
 	}
 
-	p.Title.Text = time.Now().Format(svgTimeLayout)
+	p.Title.Text = time.Now().Format(svgTimeLayout) + " Середня кількість посилань: " + strconv.FormatFloat(avgNumPosts, 'f', -1, 64)
 	p.X.Label.Text = "Час (хв.)"
-	p.Y.Label.Text = "Кількість посилань"
+	p.Y.Label.Text = "Відхилення від середньої кількості посилань"
 
 	err = plotutil.AddLinePoints(p,
 		name, pts)
@@ -72,8 +73,8 @@ func saveSvg(X, Y []float64, name string) {
 	p.Add(c)
 	p.Legend.Add("Безпечний рівень", c)
 	p.Legend.Padding = vg.Length(5)
-	p.Y.Min = 0.0
-	p.Y.Max = 100.0
+	p.Y.Min = -20.0
+	p.Y.Max = 20.0
 	p.X.Max = 0.0
 	p.X.Min = -500.0
 	// Save the plot to a PNG file.
@@ -205,6 +206,6 @@ func main() {
 		Y = append(Y, float64(count))
 		fmt.Fprintf(f, "%s\t%d\n", time.Now().Format(layout), count)
 		y := getAverageArray(Y)
-		saveSvg(rebaseXAxis(X, x), rebaseXAxis(Y, y), pageName)
+		saveSvg(rebaseXAxis(X, x), rebaseXAxis(Y, y), pageName, y)
 	}
 }
