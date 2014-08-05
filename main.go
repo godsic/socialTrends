@@ -91,6 +91,7 @@ func stopOnError(err error) {
 
 func getWallID(u string, v url.Values) string {
 	resp, _ := http.PostForm(u, v)
+	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	sbody := string(body)
 	return wallIDRe.FindAllString(sbody, -1)[0]
@@ -98,6 +99,7 @@ func getWallID(u string, v url.Values) string {
 
 func getPostIDs(wallID string, v url.Values) []string {
 	resp, _ := http.PostForm(vkAddr+wallID, v)
+	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	sbody := string(body)
 	return postIDRe.FindAllString(sbody, -1)
@@ -107,6 +109,7 @@ func countMatches(postID string, count *int64, finished chan int) {
 	postURL, _ := url.Parse(vkAddr + postID)
 	postBaseURL := vkAddr + postURL.Path
 	resp, _ := http.PostForm(postBaseURL, postURL.Query())
+	defer resp.Body.Close()
 	rInUTF8 := transform.NewReader(resp.Body, charmap.Windows1251.NewDecoder())
 	body, _ := ioutil.ReadAll(rInUTF8)
 	s := strings.ToLower(string(body))
