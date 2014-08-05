@@ -61,7 +61,7 @@ func saveSvg(X, Y []float64, name string) {
 	p.Y.Label.Text = "Кількість посилань"
 
 	err = plotutil.AddLinePoints(p,
-		"м. Єнакієве (typical_enakievo)", pts)
+		name, pts)
 	if err != nil {
 		panic(err)
 	}
