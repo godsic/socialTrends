@@ -136,6 +136,23 @@ func rebaseXAxis(X []float64, x0 float64) []float64 {
 	return XX
 }
 
+func rebaseYAxis(Y []float64, y0 float64) []float64 {
+	YY := make([]float64, len(Y))
+	for i, _ := range Y {
+		YY[i] = Y[i] - y0
+	}
+	return YY
+}
+
+func getAverageArray(in []float64) (val float64) {
+	val = 0.0
+	for _, v := range in {
+		val += v
+	}
+	val /= float64(len(in))
+	return
+}
+
 func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -187,6 +204,7 @@ func main() {
 		X = append(X, x)
 		Y = append(Y, float64(count))
 		fmt.Fprintf(f, "%s\t%d\n", time.Now().Format(layout), count)
-		saveSvg(rebaseXAxis(X, x), Y, pageName)
+		y := getAverageArray(Y)
+		saveSvg(rebaseXAxis(X, x), rebaseXAxis(Y, y), pageName)
 	}
 }
