@@ -84,7 +84,7 @@ func saveSvg(X, Y []float64, name string, avgNumPosts float64) {
 	p.Y.Min = -20.0
 	p.Y.Max = 20.0
 	p.X.Max = 0.0
-	p.X.Min = -500.0
+	p.X.Min = -480.0
 	// Save the plot to a PNG file.
 	if err := p.Save(10, 5, name+extGraph); err != nil {
 		panic(err)
