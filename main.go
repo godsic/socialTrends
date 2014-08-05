@@ -31,6 +31,7 @@ const (
 	extData         = ".dat"
 	extGraph        = ".svg"
 	defaultPageName = "typical_enakievo"
+	imageName       = "status"
 	safeLimit       = 10
 )
 
@@ -86,7 +87,7 @@ func saveSvg(X, Y []float64, name string, avgNumPosts float64) {
 	p.X.Max = 0.0
 	p.X.Min = -480.0
 	// Save the plot to a PNG file.
-	if err := p.Save(10, 5, name+extGraph); err != nil {
+	if err := p.Save(10, 5, imageName+extGraph); err != nil {
 		panic(err)
 	}
 
