@@ -12,6 +12,7 @@ import (
 	"image/color"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -30,6 +31,7 @@ const (
 	extData         = ".dat"
 	extGraph        = ".svg"
 	defaultPageName = "typical_enakievo"
+	safeLimit       = 10
 )
 
 var (
@@ -67,12 +69,18 @@ func saveSvg(X, Y []float64, name string, avgNumPosts float64) {
 		panic(err)
 	}
 
-	c := plotter.NewFunction(func(x float64) float64 { return 50.0 })
-	c.Color = color.RGBA{B: 255, A: 255}
-	c.Dashes = []vg.Length{vg.Points(4), vg.Points(5)}
-	p.Add(c)
-	p.Legend.Add("Безпечний рівень", c)
+	cUp := plotter.NewFunction(func(x float64) float64 { return math.Abs(safeLimit) })
+	cUp.Color = color.RGBA{B: 255, A: 255}
+	cUp.Dashes = []vg.Length{vg.Points(4), vg.Points(5)}
+	p.Add(cUp)
+	p.Legend.Add("Безпечний рівень", cUp)
 	p.Legend.Padding = vg.Length(5)
+
+	cDown := plotter.NewFunction(func(x float64) float64 { return -math.Abs(safeLimit) })
+	cDown.Color = color.RGBA{B: 255, A: 255}
+	cDown.Dashes = []vg.Length{vg.Points(4), vg.Points(5)}
+	p.Add(cDown)
+
 	p.Y.Min = -20.0
 	p.Y.Max = 20.0
 	p.X.Max = 0.0
