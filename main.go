@@ -38,7 +38,7 @@ const (
 var (
 	postIDRe = regexp.MustCompile(`wall-[^"]*offset=last&f=replies`)
 	wallIDRe = regexp.MustCompile(`wall-[^\'][0-9]*`)
-	dict     = []string{"бомб", "град", "взрыв", "взор", "ракет", "стрел", "карло", "енак", "горлов", "енач"}
+	dict     = []string{"бомб", "град", "взрыв", "взор", "ракет", "стрел", "мином", "мина", "самол"}
 	v        = url.Values{"own": {"1"}}
 	finished = make(chan int)
 	logfn    = flag.String("log", "", "File to output data to (default: $PAGENAME.dat)")
