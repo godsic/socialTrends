@@ -138,29 +138,11 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "index.html")
 }
 
-func rebaseXAxis(X []float64, x0 float64) []float64 {
-	XX := make([]float64, len(X))
+func fillXAxis(X []float64, step float64) {
+	N := len(X) - 1
 	for i, _ := range X {
-		XX[i] = X[i] - x0
+		X[i] = step * float64(i-N)
 	}
-	return XX
-}
-
-func rebaseYAxis(Y []float64, y0 float64) []float64 {
-	YY := make([]float64, len(Y))
-	for i, _ := range Y {
-		YY[i] = Y[i] - y0
-	}
-	return YY
-}
-
-func getAverageArray(in []float64) (val float64) {
-	val = 0.0
-	for _, v := range in {
-		val += v
-	}
-	val /= float64(len(in))
-	return
 }
 
 func main() {
@@ -199,7 +181,7 @@ func main() {
 	f, err := os.OpenFile(*logfn, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0755)
 	defer f.Close()
 	stopOnError(err)
-	x := 0.0
+	avg := float64(0.0)
 	for {
 		postIDs := getPostIDs(wallID, v)
 		count := int64(0)
@@ -210,11 +192,17 @@ func main() {
 		for _, _ = range postIDs {
 			<-finished
 		}
-		x += 0.5
-		X = append(X, x)
-		Y = append(Y, float64(count))
 		fmt.Fprintf(f, "%s\t%d\n", time.Now().Format(layout), count)
-		y := getAverageArray(Y)
-		saveSvg(rebaseXAxis(X, x), rebaseXAxis(Y, y), pageName, y)
+
+		X = append(X, 0.0)
+		fillXAxis(X, *period/60.0)
+		// get Y average
+		y := float64(count)
+		pre := 1.0 / float64(len(Y)+1.0)
+		avg = avg*(1.0-pre) + y*pre
+		//
+		Y = append(Y, y-avg)
+
+		saveSvg(X, Y, pageName, avg)
 	}
 }
