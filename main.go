@@ -18,7 +18,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
-	"strconv"
+	// "strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -32,7 +32,8 @@ const (
 	extGraph        = ".svg"
 	defaultPageName = "typical_enakievo"
 	imageName       = "status"
-	safeLimit       = 10
+	safeLimit       = 70
+	headroom        = 10
 )
 
 var (
@@ -47,7 +48,7 @@ var (
 	Y        = make([]float64, 0, 3000)
 )
 
-func saveSvg(X, Y []float64, name string, avgNumPosts float64) {
+func saveSvg(X, Y []float64, name string, minY, maxY float64) {
 
 	pts := make(plotter.XYs, len(Y))
 	for i, _ := range Y {
@@ -60,7 +61,7 @@ func saveSvg(X, Y []float64, name string, avgNumPosts float64) {
 		panic(err)
 	}
 
-	p.Title.Text = time.Now().Format(svgTimeLayout) + " Середня кількість посилань: " + strconv.FormatFloat(avgNumPosts, 'f', -1, 64)
+	p.Title.Text = time.Now().Format(svgTimeLayout)
 	p.X.Label.Text = "Час (хв.)"
 	p.Y.Label.Text = "Відхилення від середньої кількості посилань"
 
@@ -82,8 +83,8 @@ func saveSvg(X, Y []float64, name string, avgNumPosts float64) {
 	cDown.Dashes = []vg.Length{vg.Points(4), vg.Points(5)}
 	p.Add(cDown)
 
-	p.Y.Min = -20.0
-	p.Y.Max = 20.0
+	p.Y.Min = minY
+	p.Y.Max = maxY
 	p.X.Max = 0.0
 	p.X.Min = -480.0
 	// Save the plot to a PNG file.
@@ -195,7 +196,8 @@ func main() {
 	f, err := os.OpenFile(*logfn, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0755)
 	defer f.Close()
 	stopOnError(err)
-	avg := float64(0.0)
+	minY := 1.0e200
+	maxY := -1.0e200
 	for {
 		log.Println("extract comments...")
 		postIDs := getPostIDs(wallID, v)
@@ -217,11 +219,15 @@ func main() {
 		fillXAxis(X, *period/60.0)
 		// get Y average
 		y := float64(count)
-		pre := 1.0 / float64(len(Y)+1.0)
-		avg = avg*(1.0-pre) + y*pre
+		if y > maxY {
+			maxY = y
+		}
+		if y < minY {
+			minY = y
+		}
 		//
-		Y = append(Y, y-avg)
+		Y = append(Y, y)
 		log.Println("rendering data...")
-		saveSvg(X, Y, pageName, avg)
+		saveSvg(X, Y, pageName, minY-headroom, maxY+headroom)
 	}
 }
