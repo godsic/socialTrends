@@ -197,21 +197,22 @@ func main() {
 	stopOnError(err)
 	avg := float64(0.0)
 	for {
-		Log.Println("extract comments...")
+		log.Println("extract comments...")
 		postIDs := getPostIDs(wallID, v)
 		count := int64(0)
-		Log.Println("searching for matches...")
+		log.Println("searching for matches...")
 		for _, postID := range postIDs {
 			go countMatches(postID, &count, finished)
 		}
-		Log.Println("waiting...")
+		log.Println("waiting...")
 		time.Sleep(time.Duration(*period) * time.Second)
 		for _, _ = range postIDs {
 			<-finished
 		}
 
-		fmt.Fprintf(f, "%s\t%d\n", time.Now().Format(layout), count)
-
+		log.Println("saving data...")
+		_, err := fmt.Fprintf(f, "%s\t%d\n", time.Now().Format(layout), count)
+		printIfError(err)
 		X = append(X, 0.0)
 		fillXAxis(X, *period/60.0)
 		// get Y average
@@ -220,7 +221,7 @@ func main() {
 		avg = avg*(1.0-pre) + y*pre
 		//
 		Y = append(Y, y-avg)
-
+		log.Println("rendering data...")
 		saveSvg(X, Y, pageName, avg)
 	}
 }
