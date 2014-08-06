@@ -100,18 +100,28 @@ func stopOnError(err error) {
 	}
 }
 
+func printIfError(err error) {
+	if err != nil {
+		log.Println(err)
+	}
+}
+
 func getWallID(u string, v url.Values) string {
-	resp, _ := http.PostForm(u, v)
+	resp, err := http.PostForm(u, v)
 	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
+	printIfError(err)
+	body, err := ioutil.ReadAll(resp.Body)
+	printIfError(err)
 	sbody := string(body)
 	return wallIDRe.FindAllString(sbody, -1)[0]
 }
 
 func getPostIDs(wallID string, v url.Values) []string {
-	resp, _ := http.PostForm(vkAddr+wallID, v)
+	resp, err := http.PostForm(vkAddr+wallID, v)
 	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
+	printIfError(err)
+	body, err := ioutil.ReadAll(resp.Body)
+	printIfError(err)
 	sbody := string(body)
 	return postIDRe.FindAllString(sbody, -1)
 }
@@ -119,15 +129,19 @@ func getPostIDs(wallID string, v url.Values) []string {
 func countMatches(postID string, count *int64, finished chan int) {
 	postURL, _ := url.Parse(vkAddr + postID)
 	postBaseURL := vkAddr + postURL.Path
-	resp, _ := http.PostForm(postBaseURL, postURL.Query())
-	defer resp.Body.Close()
+	resp, err := http.PostForm(postBaseURL, postURL.Query())
+	defer func() {
+		resp.Body.Close()
+		finished <- 1
+	}()
+	printIfError(err)
 	rInUTF8 := transform.NewReader(resp.Body, charmap.Windows1251.NewDecoder())
-	body, _ := ioutil.ReadAll(rInUTF8)
+	body, err := ioutil.ReadAll(rInUTF8)
+	printIfError(err)
 	s := strings.ToLower(string(body))
 	for _, word := range dict {
 		atomic.AddInt64(count, int64(strings.Count(s, word)))
 	}
-	finished <- 1
 }
 
 func startServer(addr string) {
@@ -183,15 +197,19 @@ func main() {
 	stopOnError(err)
 	avg := float64(0.0)
 	for {
+		Log.Println("extract comments...")
 		postIDs := getPostIDs(wallID, v)
 		count := int64(0)
+		Log.Println("searching for matches...")
 		for _, postID := range postIDs {
 			go countMatches(postID, &count, finished)
 		}
+		Log.Println("waiting...")
 		time.Sleep(time.Duration(*period) * time.Second)
 		for _, _ = range postIDs {
 			<-finished
 		}
+
 		fmt.Fprintf(f, "%s\t%d\n", time.Now().Format(layout), count)
 
 		X = append(X, 0.0)
