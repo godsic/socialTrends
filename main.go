@@ -36,6 +36,7 @@ const (
 	headroom         = 10
 	postFormTimeout  = 5.0 * time.Second
 	sleepIfPostFails = 2.0 * time.Second
+	vgFontDir        = "/src/code.google.com/p/plotinum/vg/fonts"
 )
 
 var (
@@ -175,16 +176,17 @@ func fillXAxis(X []float64, step float64) {
 func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
+	log.Println(vg.FontDirs)
+	fontdir := os.Getenv("GOPATH") + vgFontDir
+	vg.FontDirs = []string{fontdir, "./", "./fonts"}
+	log.Println(vg.FontDirs)
 
 	http.HandleFunc("/", rootHandler)
-
 	addr := fmt.Sprintf("%s:%s", os.Getenv("HOST"), os.Getenv("PORT"))
 	if addr == ":" || len(addr) == 0 {
 		addr = ":8080"
 	}
-
 	http.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir("."))))
-
 	go startServer(addr)
 
 	flag.Parse()
