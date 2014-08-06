@@ -63,7 +63,7 @@ func saveSvg(X, Y []float64, name string, minY, maxY float64) {
 
 	p.Title.Text = time.Now().Format(svgTimeLayout)
 	p.X.Label.Text = "Час (хв.)"
-	p.Y.Label.Text = "Відхилення від середньої кількості посилань"
+	p.Y.Label.Text = "Кількість посилань"
 
 	err = plotutil.AddLinePoints(p,
 		name, pts)
@@ -71,17 +71,14 @@ func saveSvg(X, Y []float64, name string, minY, maxY float64) {
 		panic(err)
 	}
 
-	cUp := plotter.NewFunction(func(x float64) float64 { return math.Abs(safeLimit) })
-	cUp.Color = color.RGBA{B: 255, A: 255}
-	cUp.Dashes = []vg.Length{vg.Points(4), vg.Points(5)}
-	p.Add(cUp)
-	p.Legend.Add("Безпечний рівень", cUp)
+	c := plotter.NewFunction(func(x float64) float64 { return math.Abs(safeLimit) })
+	c.Color = color.RGBA{B: 255, A: 255}
+	c.Dashes = []vg.Length{vg.Points(4), vg.Points(5)}
+	p.Add(c)
+	p.Legend.Add("Безпечний рівень", c)
 	p.Legend.Padding = vg.Length(5)
 
-	cDown := plotter.NewFunction(func(x float64) float64 { return -math.Abs(safeLimit) })
-	cDown.Color = color.RGBA{B: 255, A: 255}
-	cDown.Dashes = []vg.Length{vg.Points(4), vg.Points(5)}
-	p.Add(cDown)
+	p.Add(plotter.NewGrid())
 
 	p.Y.Min = minY
 	p.Y.Max = maxY
