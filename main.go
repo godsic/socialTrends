@@ -25,15 +25,17 @@ import (
 )
 
 const (
-	vkAddr          = "http://vk.com/"
-	layout          = "2006-01-02:15:04:05"
-	svgTimeLayout   = "15:04:05 -0700 EDT Jan 2 2006"
-	extData         = ".dat"
-	extGraph        = ".svg"
-	defaultPageName = "typical_enakievo"
-	imageName       = "status"
-	safeLimit       = 70
-	headroom        = 10
+	vkAddr           = "http://vk.com/"
+	layout           = "2006-01-02:15:04:05"
+	svgTimeLayout    = "15:04:05 -0700 EDT Jan 2 2006"
+	extData          = ".dat"
+	extGraph         = ".svg"
+	defaultPageName  = "typical_enakievo"
+	imageName        = "status"
+	safeLimit        = 70
+	headroom         = 10
+	postFormTimeout  = 5.0 * time.Second
+	sleepIfPostFails = 2.0 * time.Second
 )
 
 var (
@@ -125,17 +127,30 @@ func getPostIDs(wallID string, v url.Values) []string {
 }
 
 func countMatches(postID string, count *int64, finished chan int) {
+	defer func() { finished <- 1 }()
+
+	var (
+		body []byte
+		err  error
+	)
+
 	postURL, _ := url.Parse(vkAddr + postID)
 	postBaseURL := vkAddr + postURL.Path
-	resp, err := http.PostForm(postBaseURL, postURL.Query())
-	defer func() {
+
+	client := &http.Client{Timeout: postFormTimeout}
+
+	for {
+		resp, _ := client.PostForm(postBaseURL, postURL.Query())
+		rInUTF8 := transform.NewReader(resp.Body, charmap.Windows1251.NewDecoder())
+		body, err = ioutil.ReadAll(rInUTF8)
 		resp.Body.Close()
-		finished <- 1
-	}()
-	printIfError(err)
-	rInUTF8 := transform.NewReader(resp.Body, charmap.Windows1251.NewDecoder())
-	body, err := ioutil.ReadAll(rInUTF8)
-	printIfError(err)
+		if err == nil {
+			break
+		}
+		printIfError(err)
+		time.Sleep(sleepIfPostFails)
+	}
+
 	s := strings.ToLower(string(body))
 	for _, word := range dict {
 		atomic.AddInt64(count, int64(strings.Count(s, word)))
