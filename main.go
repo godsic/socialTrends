@@ -42,36 +42,67 @@ const (
 var (
 	postIDRe = regexp.MustCompile(`wall-[^"]*offset=last&f=replies`)
 	wallIDRe = regexp.MustCompile(`wall-[^\'][0-9]*`)
-	dict     = []string{"бомб", "град", "взрыв", "взор", "ракет", "стрел", "мином", "мина", "самол"}
+	dict     = [][]string{{"бомб", "град", "взрыв", "взор", "ракет", "стрел", "мином", "мина", "самол", "снаряд", "пуля", "пули"},
+		{"укр", "нац", "карат", "армия", "правосек", "пиндос"},
+		{"сепар", "ополчен", "комуфл", "ватник", "террор", "новорос", "днр", "лнр", "чечен", "козак", "казак"},
+		{"карло"},
+		{"ольховат"},
+		{"ватут"},
+		{"блоч"},
+		{"фильтров"},
+		{"центр"},
+		{"розовк"},
+		{"веровк"},
+		{"софиевк"},
+		{"волынц"}}
 	v        = url.Values{"own": {"1"}}
 	finished = make(chan int)
 	logfn    = flag.String("log", "", "File to output data to (default: $PAGENAME.dat)")
 	period   = flag.Float64("period", 30.0, "Update period (s)")
-	X        = make([]float64, 0, 3000)
-	Y        = make([]float64, 0, 3000)
+	X        = make([]float64, 0, 1000)
+	Y        = make([][]float64, len(dict))
+	count    = make([]int64, len(dict))
 )
 
-func saveSvg(X, Y []float64, name string, minY, maxY float64) {
+func flattenArrayStrings(in []string) string {
+	str := ""
+	for _, val := range in {
+		str += (val + " ")
+	}
+	return str
+}
 
+func getPlotterFromSlice(X []float64, Y []float64) plotter.XYs {
 	pts := make(plotter.XYs, len(Y))
 	for i, _ := range Y {
 		pts[i].X = X[i]
 		pts[i].Y = Y[i]
 	}
+	return pts
+}
+
+func saveSvg(X []float64, Y [][]float64, name string, minY, maxY float64) {
 
 	p, err := plot.New()
 	if err != nil {
 		panic(err)
 	}
 
-	p.Title.Text = time.Now().Format(svgTimeLayout)
+	p.Title.Text = vkAddr + name + " " + time.Now().Format(svgTimeLayout)
 	p.X.Label.Text = "Час (хв.)"
 	p.Y.Label.Text = "Кількість посилань"
 
-	err = plotutil.AddLinePoints(p,
-		name, pts)
-	if err != nil {
-		panic(err)
+	for i, y := range Y {
+		line, err := plotter.NewLine(getPlotterFromSlice(X, y))
+		line.Color = plotutil.Color(i)
+		if i%2 != 0 {
+			line.Dashes = []vg.Length{vg.Points(4), vg.Points(5)}
+		}
+		if err != nil {
+			panic(err)
+		}
+		p.Add(line)
+		p.Legend.Add(flattenArrayStrings(dict[i]), line)
 	}
 
 	c := plotter.NewFunction(func(x float64) float64 { return math.Abs(safeLimit) })
@@ -79,7 +110,8 @@ func saveSvg(X, Y []float64, name string, minY, maxY float64) {
 	c.Dashes = []vg.Length{vg.Points(4), vg.Points(5)}
 	p.Add(c)
 	p.Legend.Add("Безпечний рівень", c)
-	p.Legend.Padding = vg.Length(5)
+	p.Legend.Font.Size = vg.Length(6)
+	p.Legend.Left = true
 
 	p.Add(plotter.NewGrid())
 
@@ -127,7 +159,7 @@ func getPostIDs(wallID string, v url.Values) []string {
 	return postIDRe.FindAllString(sbody, -1)
 }
 
-func countMatches(postID string, count *int64, finished chan int) {
+func countMatches(postID string, count []int64, finished chan int) {
 	defer func() { finished <- 1 }()
 
 	var (
@@ -158,8 +190,10 @@ func countMatches(postID string, count *int64, finished chan int) {
 	}
 
 	s := strings.ToLower(string(body))
-	for _, word := range dict {
-		atomic.AddInt64(count, int64(strings.Count(s, word)))
+	for i, subdict := range dict {
+		for _, word := range subdict {
+			atomic.AddInt64(&count[i], int64(strings.Count(s, word)))
+		}
 	}
 }
 
@@ -220,10 +254,12 @@ func main() {
 	for {
 		log.Println("extract comments...")
 		postIDs := getPostIDs(wallID, v)
-		count := int64(0)
+		for i, _ := range count {
+			count[i] = int64(0)
+		}
 		log.Println("searching for matches...")
 		for _, postID := range postIDs {
-			go countMatches(postID, &count, finished)
+			go countMatches(postID, count, finished)
 		}
 		log.Println("waiting...")
 		time.Sleep(time.Duration(*period) * time.Second)
@@ -231,22 +267,28 @@ func main() {
 			<-finished
 		}
 
-		log.Println("saving data...")
-		_, err := fmt.Fprintf(f, "%s\t%d\n", time.Now().Format(layout), count)
-		printIfError(err)
 		X = append(X, 0.0)
 		fillXAxis(X, *period/60.0)
-		// get Y average
-		y := float64(count)
-		if y > maxY {
-			maxY = y
+
+		_, err := fmt.Fprintf(f, "%s\t", time.Now().Format(layout))
+		printIfError(err)
+
+		for i, _ := range count {
+			_, err := fmt.Fprintf(f, "%d\t", count[i])
+			printIfError(err)
+			// get Y average
+			y := float64(count[i])
+			if y > maxY {
+				maxY = y
+			}
+			if y < minY {
+				minY = y
+			}
+			//
+			Y[i] = append(Y[i], y)
 		}
-		if y < minY {
-			minY = y
-		}
-		//
-		Y = append(Y, y)
-		log.Println("rendering data...")
+		_, err = fmt.Fprint(f, "\n")
+		printIfError(err)
 		saveSvg(X, Y, pageName, minY-headroom, maxY+headroom)
 	}
 }
