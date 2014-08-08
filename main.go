@@ -83,8 +83,8 @@ func saveSvg(X, Y []float64, name string, minY, maxY float64) {
 
 	p.Add(plotter.NewGrid())
 
-	p.Y.Min = minY
-	p.Y.Max = maxY
+	p.Y.Min = math.Min(minY, safeLimit-headroom)
+	p.Y.Max = math.Max(maxY, safeLimit+headroom)
 	p.X.Max = 0.0
 	p.X.Min = -480.0
 	// Save the plot to a PNG file.
