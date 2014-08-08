@@ -141,14 +141,19 @@ func countMatches(postID string, count *int64, finished chan int) {
 	client := &http.Client{Timeout: postFormTimeout}
 
 	for {
-		resp, _ := client.PostForm(postBaseURL, postURL.Query())
-		rInUTF8 := transform.NewReader(resp.Body, charmap.Windows1251.NewDecoder())
-		body, err = ioutil.ReadAll(rInUTF8)
+		resp, err1 := client.PostForm(postBaseURL, postURL.Query())
+		printIfError(err1)
+		if err1 != nil {
+			resp.Body.Close()
+			goto SKIPBADREQ
+		}
+		body, err = ioutil.ReadAll(transform.NewReader(resp.Body, charmap.Windows1251.NewDecoder()))
+		printIfError(err)
 		resp.Body.Close()
 		if err == nil {
 			break
 		}
-		printIfError(err)
+	SKIPBADREQ:
 		time.Sleep(sleepIfPostFails)
 	}
 
