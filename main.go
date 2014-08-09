@@ -55,13 +55,18 @@ var (
 		{"веровк"},
 		{"софиевк"},
 		{"волынц"}}
-	v        = url.Values{"own": {"1"}}
-	finished = make(chan int)
-	logfn    = flag.String("log", "", "File to output data to (default: $PAGENAME.dat)")
-	period   = flag.Float64("period", 30.0, "Update period (s)")
-	X        = make([]float64, 0, 1000)
-	Y        = make([][]float64, len(dict))
-	count    = make([]int64, len(dict))
+	v             = url.Values{"own": {"1"}}
+	finished      = make(chan int)
+	logfn         = flag.String("log", "", "File to output data to (default: $PAGENAME.dat)")
+	period        = flag.Float64("period", 30.0, "Update period (s)")
+	X             = make([]float64, 0, 1000)
+	Y             = make([][]float64, len(dict))
+	count         = make([]int64, len(dict))
+	DefaultDashes = [][]vg.Length{
+		{},
+		{vg.Points(1), vg.Points(1)},
+		{vg.Points(3), vg.Points(1)},
+		{vg.Points(5), vg.Points(1)}}
 )
 
 func flattenArrayStrings(in []string) string {
@@ -94,21 +99,21 @@ func saveSvg(X []float64, Y [][]float64, name string, minY, maxY float64) {
 
 	for i, y := range Y {
 		line, err := plotter.NewLine(getPlotterFromSlice(X, y))
-		line.Color = plotutil.Color(i)
-		if i%2 != 0 {
-			line.Dashes = []vg.Length{vg.Points(4), vg.Points(5)}
-		}
 		if err != nil {
 			panic(err)
 		}
+		line.Color = plotutil.Color(i)
+		line.Dashes = DefaultDashes[i/7]
 		p.Add(line)
 		p.Legend.Add(flattenArrayStrings(dict[i]), line)
 	}
 
 	c := plotter.NewFunction(func(x float64) float64 { return math.Abs(safeLimit) })
 	c.Color = color.RGBA{B: 255, A: 255}
-	c.Dashes = []vg.Length{vg.Points(4), vg.Points(5)}
+	c.Dashes = []vg.Length{vg.Points(2), vg.Points(2)}
+	c.Width = vg.Length(1)
 	p.Add(c)
+
 	p.Legend.Add("Безпечний рівень", c)
 	p.Legend.Font.Size = vg.Length(6)
 	p.Legend.Left = true
@@ -118,7 +123,7 @@ func saveSvg(X []float64, Y [][]float64, name string, minY, maxY float64) {
 	p.Y.Min = math.Min(minY, safeLimit-headroom)
 	p.Y.Max = math.Max(maxY, safeLimit+headroom)
 	p.X.Max = 0.0
-	p.X.Min = -480.0
+	p.X.Min = -720.0
 	// Save the plot to a PNG file.
 	if err := p.Save(10, 5, imageName+extGraph); err != nil {
 		panic(err)
