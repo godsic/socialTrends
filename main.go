@@ -54,7 +54,8 @@ var (
 		{"розовк"},
 		{"веровк"},
 		{"софиевк"},
-		{"волынц"}}
+		{"волынц"},
+		{"горлов"}}
 	v             = url.Values{"own": {"1"}}
 	finished      = make(chan int)
 	logfn         = flag.String("log", "", "File to output data to (default: $PAGENAME.dat)")
