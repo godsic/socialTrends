@@ -185,7 +185,6 @@ func countMatches(postID string, count []int64, finished chan int) {
 		resp, err1 := client.PostForm(postBaseURL, postURL.Query())
 		printIfError(err1)
 		if err1 != nil {
-			resp.Body.Close()
 			goto SKIPBADREQ
 		}
 		body, err = ioutil.ReadAll(transform.NewReader(resp.Body, charmap.Windows1251.NewDecoder()))
