@@ -121,7 +121,7 @@ func saveSvg(X []float64, Y [][]float64, name string, minY, maxY float64) {
 	p.Legend.Add("Безпечний рівень", c)
 	p.Legend.Font.Size = vg.Length(6)
 	p.Legend.Left = true
-
+	p.Legend.Top = true
 	p.Add(plotter.NewGrid())
 
 	p.Y.Min = math.Min(minY, safeLimit-headroom)
