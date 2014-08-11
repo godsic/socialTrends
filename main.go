@@ -148,46 +148,22 @@ func printIfError(err error) {
 	}
 }
 
-func getWallID(u string, v url.Values) string {
-	resp, err := http.PostForm(u, v)
-	defer resp.Body.Close()
-	printIfError(err)
-	body, err := ioutil.ReadAll(resp.Body)
-	printIfError(err)
-	sbody := string(body)
-	return wallIDRe.FindAllString(sbody, -1)[0]
-}
-
-func getPostIDs(wallID string, v url.Values) []string {
-	resp, err := http.PostForm(vkAddr+wallID, v)
-	defer resp.Body.Close()
-	printIfError(err)
-	body, err := ioutil.ReadAll(resp.Body)
-	printIfError(err)
-	sbody := string(body)
-	return postIDRe.FindAllString(sbody, -1)
-}
-
-func countMatches(postID string, count []int64, finished chan int) {
-	defer func() { finished <- 1 }()
+func getPageErrorProne(u string, query url.Values) string {
 
 	var (
 		body []byte
 		err  error
 	)
 
-	postURL, _ := url.Parse(vkAddr + postID)
-	postBaseURL := vkAddr + postURL.Path
-
 	client := &http.Client{Timeout: postFormTimeout}
 
 	for {
-		resp, err1 := client.PostForm(postBaseURL, postURL.Query())
+		resp, err1 := client.PostForm(u, query)
 		printIfError(err1)
 		if err1 != nil {
 			goto SKIPBADREQ
 		}
-		body, err = ioutil.ReadAll(transform.NewReader(resp.Body, charmap.Windows1251.NewDecoder()))
+		body, err = ioutil.ReadAll(resp.Body)
 		printIfError(err)
 		resp.Body.Close()
 		if err == nil {
@@ -195,9 +171,34 @@ func countMatches(postID string, count []int64, finished chan int) {
 		}
 	SKIPBADREQ:
 		time.Sleep(sleepIfPostFails)
-	}
 
-	s := strings.ToLower(string(body))
+	}
+	return string(body)
+}
+
+func getWallID(u string, v url.Values) string {
+	body := getPageErrorProne(u, v)
+	return wallIDRe.FindAllString(body, -1)[0]
+}
+
+func getPostIDs(wallID string, v url.Values) []string {
+	body := getPageErrorProne(vkAddr+wallID, v)
+	return postIDRe.FindAllString(body, -1)
+}
+
+func countMatches(postID string, count []int64, finished chan int) {
+	defer func() { finished <- 1 }()
+
+	postURL, _ := url.Parse(vkAddr + postID)
+	postQuery := postURL.Query()
+	postBaseURL := vkAddr + postURL.Path
+
+	body := getPageErrorProne(postBaseURL, postQuery)
+
+	str, err := ioutil.ReadAll(transform.NewReader(strings.NewReader(body), charmap.Windows1251.NewDecoder()))
+	printIfError(err)
+
+	s := strings.ToLower(string(str))
 	for i, subdict := range dict {
 		for _, word := range subdict {
 			atomic.AddInt64(&count[i], int64(strings.Count(s, word)))

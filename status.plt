@@ -124,7 +124,7 @@ set ylabel "Кількість посилань"
 set ylabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
 set y2label "" 
 set y2label  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
-set yrange [ 0.00000 : 100.0000 ] noreverse nowriteback
+set yrange [ 20.00000 : 100.0000 ] noreverse nowriteback
 set y2range [ * : * ] noreverse nowriteback
 set zlabel "" 
 set zlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
@@ -150,5 +150,5 @@ set loadpath
 set fontpath 
 set psdir
 set fit noerrorvariables
-plot 'typical_enakievo.dat' u 1:2 lw 3 notitle, 40 w l lt 2 lw 3 t "Безпечний рівень"
+plot 'typical_enakievo.dat' u 1:2 lw 2 notitle, 70 w l lt 2 lw 3 t "Безпечний рівень"
 #    EOF
