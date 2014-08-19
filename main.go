@@ -178,7 +178,8 @@ func getPageErrorProne(u string, query url.Values) string {
 
 func getWallID(u string, v url.Values) string {
 	body := getPageErrorProne(u, v)
-	return wallIDRe.FindAllString(body, -1)[0]
+	wallIDs := wallIDRe.FindAllString(body, -1)
+	return wallIDs[len(wallIDs)-1]
 }
 
 func getPostIDs(wallID string, v url.Values) []string {
